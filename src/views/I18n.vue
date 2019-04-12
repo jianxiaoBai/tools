@@ -48,10 +48,10 @@
 </template>
 
 <script>
-import XLSX from "xlsx";
+import XLSX from 'xlsx'
 export default {
-  name: "I18nTrans",
-  data() {
+  name: 'I18nTrans',
+  data () {
     return {
       protoObject: null,
       outputObject: null,
@@ -59,32 +59,32 @@ export default {
       inputBox: null,
       index: 0,
       excelArr: [],
-      currentArrName: "",
-      outFile: "", // 导出文件el
-      imFile: "", // 导入文件el
-      excelData: ""
-    };
+      currentArrName: '',
+      outFile: '', // 导出文件el
+      imFile: '', // 导入文件el
+      excelData: ''
+    }
   },
-  mounted() {
-    this.dropBox = this.$el.querySelector("#i18nt-file");
-    this.inputBox = this.$el.querySelector("#i18nt-box");
-    this.outFile = this.$el.querySelector("#downlink");
-    this.imFile = this.$el.querySelector("#imFile");
+  mounted () {
+    this.dropBox = this.$el.querySelector('#i18nt-file')
+    this.inputBox = this.$el.querySelector('#i18nt-box')
+    this.outFile = this.$el.querySelector('#downlink')
+    this.imFile = this.$el.querySelector('#imFile')
 
-    const isSave = localStorage.getItem("isSave");
+    const isSave = localStorage.getItem('isSave')
     if (isSave) {
-      const protoObject = localStorage.getItem("protoObject");
-      const outputObject = localStorage.getItem("outputObject");
-      const excelArr = localStorage.getItem("excelArr");
+      const protoObject = localStorage.getItem('protoObject')
+      const outputObject = localStorage.getItem('outputObject')
+      const excelArr = localStorage.getItem('excelArr')
       try {
-        this.protoObject = JSON.parse(protoObject);
-        this.outputObject = JSON.parse(outputObject);
-        this.excelArr = JSON.parse(excelArr);
+        this.protoObject = JSON.parse(protoObject)
+        this.outputObject = JSON.parse(outputObject)
+        this.excelArr = JSON.parse(excelArr)
       } catch (err) {
-        this.reset();
-        alert("解析失败，请向技术人员确认文件是否损坏");
+        this.reset()
+        alert('解析失败，请向技术人员确认文件是否损坏')
       }
-      this.parseInputBox(this.outputObject, 0, this.protoObject);
+      this.parseInputBox(this.outputObject, 0, this.protoObject)
       // this.parseInputBox(JSON.parse(protoObject), 0);
       // console.log('this.excelArr', this.excelArr);
       // debugger
@@ -101,118 +101,117 @@ export default {
   methods: {
     analyzeData (data) {
       // 此处可以解析导入数据
-      return data;
+      return data
     },
     dealFile (data) {
       // 处理导入的数据
-      this.imFile.value = "";
-      this.fullscreenLoading = false;
+      this.imFile.value = ''
+      this.fullscreenLoading = false
       if (data.length <= 0) {
-        this.errorDialog = true;
-        this.errorMsg = "请导入正确信息";
+        this.errorDialog = true
+        this.errorMsg = '请导入正确信息'
       } else {
-        this.excelData = data;
+        this.excelData = data
       }
-      let inputs = document.querySelectorAll('.input');
+      let inputs = document.querySelectorAll('.input')
       for (let i = 0; i < this.excelData.length; i++) {
-        const items = this.excelData[i];
-        this.excelArr[i][2] = items.translated;
-        if(!inputs[i]) {
+        const items = this.excelData[i]
+        this.excelArr[i][2] = items.translated
+        if (!inputs[i]) {
           continue
         }
-        inputs[i].innerHTML = items.translated || '';
-        inputs[i].addEventListener("blur", e => {
-            const text = e.target.innerText;
-            if (text.replace(/\s*/g, "").length !== 0) {
-              const value = text.replace(/(^\s*)|(\s*$)|(\s*\n\s*)/g, "");
-              this.excelArr[e.target.myIndex - 1][2] = value;
-            }
-            // console.log(this.excelArr, 'this.excelArr');
-        });
+        inputs[i].innerHTML = items.translated || ''
+        inputs[i].addEventListener('blur', e => {
+          const text = e.target.innerText
+          if (text.replace(/\s*/g, '').length !== 0) {
+            const value = text.replace(/(^\s*)|(\s*$)|(\s*\n\s*)/g, '')
+            this.excelArr[e.target.myIndex - 1][2] = value
+          }
+          // console.log(this.excelArr, 'this.excelArr');
+        })
       }
-
     },
     getCharCol (n) {
       // 将指定的自然数转换为26进制表示。映射关系：[0-25] -> [A-Z]。
-      let s = "";
-      let m = 0;
+      let s = ''
+      let m = 0
       while (n > 0) {
-        m = (n % 26) + 1;
-        s = String.fromCharCode(m + 64) + s;
-        n = (n - m) / 26;
+        m = (n % 26) + 1
+        s = String.fromCharCode(m + 64) + s
+        n = (n - m) / 26
       }
-      return s;
+      return s
     },
     fixdata (data) {
       // 文件流转BinaryString
-      var o = "";
-      var l = 0;
-      var w = 10240;
+      var o = ''
+      var l = 0
+      var w = 10240
       for (; l < data.byteLength / w; ++l) {
         o += String.fromCharCode.apply(
           null,
           new Uint8Array(data.slice(l * w, l * w + w))
-        );
+        )
       }
-      o += String.fromCharCode.apply(null, new Uint8Array(data.slice(l * w)));
-      return o;
+      o += String.fromCharCode.apply(null, new Uint8Array(data.slice(l * w)))
+      return o
     },
-    importFile() {
+    importFile () {
       // 导入excel
-      this.fullscreenLoading = true;
-      let obj = this.imFile;
+      this.fullscreenLoading = true
+      let obj = this.imFile
       if (!obj.files) {
-        this.fullscreenLoading = false;
-        return;
+        this.fullscreenLoading = false
+        return
       }
-      var f = obj.files[0];
-      var reader = new FileReader();
-      let $t = this;
-      reader.onload = function(e) {
-        var data = e.target.result;
+      var f = obj.files[0]
+      var reader = new FileReader()
+      let $t = this
+      reader.onload = function (e) {
+        var data = e.target.result
         if ($t.rABS) {
           $t.wb = XLSX.read(btoa(this.fixdata(data)), {
             // 手动转化
-            type: "base64"
-          });
+            type: 'base64'
+          })
         } else {
           $t.wb = XLSX.read(data, {
-            type: "binary"
-          });
+            type: 'binary'
+          })
         }
-        let json = XLSX.utils.sheet_to_json($t.wb.Sheets[$t.wb.SheetNames[0]]);
-        console.log(typeof json);
-        $t.dealFile($t.analyzeData(json)); // analyzeData: 解析导入数据
-      };
+        let json = XLSX.utils.sheet_to_json($t.wb.Sheets[$t.wb.SheetNames[0]])
+        console.log(typeof json)
+        $t.dealFile($t.analyzeData(json)) // analyzeData: 解析导入数据
+      }
       if (this.rABS) {
-        reader.readAsArrayBuffer(f);
+        reader.readAsArrayBuffer(f)
       } else {
-        reader.readAsBinaryString(f);
+        reader.readAsBinaryString(f)
       }
     },
-    uploadFile() {
+    uploadFile () {
       // 点击导入按钮
-      this.imFile.click();
+      this.imFile.click()
     },
-    downloadFile(rs) {
+    downloadFile (rs) {
       // 点击导出按钮
       // const tableHeader = ['index', 'level', 'location', 'value', 'translated'];
-      const tableHeader = ["index", "value", "translated"];
-      let data = [{}];
+      const tableHeader = ['index', 'value', 'translated']
+      let data = [{}]
       for (let k in rs[0]) {
-        data[0][k] = tableHeader[k];
+        data[0][k] = tableHeader[k]
       }
-      data = data.concat(rs);
-      this.downloadExl(data, "file");
+      data = data.concat(rs)
+      this.downloadExl(data, 'file')
     },
-    downloadExl(json, downName, type) {
+    downloadExl (json, downName, type) {
       // 导出到excel
-      let keyMap = []; // 获取键
+      let keyMap = [] // 获取键
       for (let k in json[0]) {
-        keyMap.push(k);
+        keyMap.push(k)
       }
-      console.info("keyMap", keyMap, json);
-      let tmpdata = []; // 用来保存转换好的json
+      console.info('keyMap', keyMap, json)
+      let tmpdata = [] // 用来保存转换好的json
       json
         .map((v, i) =>
           keyMap.map((k, j) =>
@@ -228,103 +227,103 @@ export default {
           )
         )
         .reduce((prev, next) => prev.concat(next))
-        .forEach(function(v) {
+        .forEach(function (v) {
           tmpdata[v.position] = {
             v: v.v
-          };
-        });
-      let outputPos = Object.keys(tmpdata); // 设置区域,比如表格从A1到D10
+          }
+        })
+      let outputPos = Object.keys(tmpdata) // 设置区域,比如表格从A1到D10
       let tmpWB = {
-        SheetNames: ["mySheet"], // 保存的表标题
+        SheetNames: ['mySheet'], // 保存的表标题
         Sheets: {
           mySheet: Object.assign(
             {},
             tmpdata, // 内容
             {
-              "!ref": outputPos[0] + ":" + outputPos[outputPos.length - 1] // 设置填充区域
+              '!ref': outputPos[0] + ':' + outputPos[outputPos.length - 1] // 设置填充区域
             }
           )
         }
-      };
+      }
       let tmpDown = new Blob(
         [
           this.s2ab(
             XLSX.write(
               tmpWB,
               {
-                bookType: type === undefined ? "xlsx" : type,
+                bookType: type === undefined ? 'xlsx' : type,
                 bookSST: false,
-                type: "binary"
+                type: 'binary'
               } // 这里的数据是用来定义导出的格式类型
             )
           )
         ],
         {
-          type: ""
+          type: ''
         }
-      ); // 创建二进制对象写入转换好的字节流
-      var href = URL.createObjectURL(tmpDown); // 创建对象超链接
-      this.outFile.download = downName + ".xlsx"; // 下载名称
-      this.outFile.href = href; // 绑定a标签
-      this.outFile.click(); // 模拟点击实现下载
-      setTimeout(function() {
+      ) // 创建二进制对象写入转换好的字节流
+      var href = URL.createObjectURL(tmpDown) // 创建对象超链接
+      this.outFile.download = downName + '.xlsx' // 下载名称
+      this.outFile.href = href // 绑定a标签
+      this.outFile.click() // 模拟点击实现下载
+      setTimeout(function () {
         // 延时释放
-        URL.revokeObjectURL(tmpDown); // 用URL.revokeObjectURL()来释放这个object URL
-      }, 100);
+        URL.revokeObjectURL(tmpDown) // 用URL.revokeObjectURL()来释放这个object URL
+      }, 100)
     },
-    s2ab(s) {
+    s2ab (s) {
       // 字符串转字符流
-      var buf = new ArrayBuffer(s.length);
-      var view = new Uint8Array(buf);
+      var buf = new ArrayBuffer(s.length)
+      var view = new Uint8Array(buf)
       for (var i = 0; i !== s.length; ++i) {
-        view[i] = s.charCodeAt(i) & 0xff;
+        view[i] = s.charCodeAt(i) & 0xff
       }
-      return buf;
+      return buf
     },
-    onDropFile(e) {
-      this.reset();
-      const files = e.dataTransfer.files;
+    onDropFile (e) {
+      this.reset()
+      const files = e.dataTransfer.files
       if (files[0]) {
-        this.dropBox.innerHTML = files[0].name + "<br>已加载 Loaded";
-        const reader = new FileReader();
-        reader.readAsText(files[0]);
+        this.dropBox.innerHTML = files[0].name + '<br>已加载 Loaded'
+        const reader = new FileReader()
+        reader.readAsText(files[0])
         reader.onload = e => {
           try {
-            this.protoObject = JSON.parse(e.target.result);
-            this.outputObject = JSON.parse(e.target.result);
+            this.protoObject = JSON.parse(e.target.result)
+            this.outputObject = JSON.parse(e.target.result)
           } catch (err) {
-            alert("解析失败，请向技术人员确认文件是否损坏");
+            alert('解析失败，请向技术人员确认文件是否损坏')
           }
-          this.parseInputBox(this.outputObject, 0);
-        };
+          this.parseInputBox(this.outputObject, 0)
+        }
       } else {
-        alert("没有选择文件");
+        alert('没有选择文件')
       }
     },
-    parseInputBox(obj, level, protoObject = false, OKey = "") {
+    parseInputBox (obj, level, protoObject = false, OKey = '') {
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
-          const value = obj[key];
-          let protoValue;
+          const value = obj[key]
+          let protoValue
           if (protoObject) {
-            protoValue = protoObject[key];
+            protoValue = protoObject[key]
           }
-          if (typeof value === "string") {
-            this.index++;
-            const tr = document.createElement("tr");
-            tr.className = "level-" + Math.min(level, 7);
-            const tdKey = document.createElement("td");
-            tdKey.className = "key";
-            tdKey.innerHTML = key;
-            const tdValue = document.createElement("td");
-            tdValue.className = "value";
-            tdValue.innerHTML = protoObject ? protoValue : value;
-            const tdInput = document.createElement("td");
-            tdInput.setAttribute("contenteditable", "plaintext-only");
-            tdInput.className = "input";
+          if (typeof value === 'string') {
+            this.index++
+            const tr = document.createElement('tr')
+            tr.className = 'level-' + Math.min(level, 7)
+            const tdKey = document.createElement('td')
+            tdKey.className = 'key'
+            tdKey.innerHTML = key
+            const tdValue = document.createElement('td')
+            tdValue.className = 'value'
+            tdValue.innerHTML = protoObject ? protoValue : value
+            const tdInput = document.createElement('td')
+            tdInput.setAttribute('contenteditable', 'plaintext-only')
+            tdInput.className = 'input'
             if (protoObject) {
               if (protoValue !== value) {
-                tdInput.innerText = value;
+                tdInput.innerText = value
               }
             }
             // debugger
@@ -337,67 +336,67 @@ export default {
               */
               value,
               protoValue
-            ]);
-            tdInput.myIndex = this.index;
-            tdInput.addEventListener("blur", e => {
-              const text = e.target.innerText;
-              if (text.replace(/\s*/g, "").length !== 0) {
-                const value = text.replace(/(^\s*)|(\s*$)|(\s*\n\s*)/g, "");
-                obj[key] = value;
-                this.excelArr[e.target.myIndex - 1][2] = value;
+            ])
+            tdInput.myIndex = this.index
+            tdInput.addEventListener('blur', e => {
+              const text = e.target.innerText
+              if (text.replace(/\s*/g, '').length !== 0) {
+                const value = text.replace(/(^\s*)|(\s*$)|(\s*\n\s*)/g, '')
+                obj[key] = value
+                this.excelArr[e.target.myIndex - 1][2] = value
               }
-            });
-            tr.appendChild(tdKey);
-            tr.appendChild(tdValue);
-            tr.appendChild(tdInput);
-            this.inputBox.appendChild(tr);
+            })
+            tr.appendChild(tdKey)
+            tr.appendChild(tdValue)
+            tr.appendChild(tdInput)
+            this.inputBox.appendChild(tr)
           } else if (Array.isArray(value)) {
-            this.currentArrName = "_" + key;
-            this.parseInputBox(value, level + 1, protoValue, key + "_arr_");
-          } else if (typeof value === "object") {
-            this.parseInputBox(value, level + 1, protoValue, key + "_obj_");
+            this.currentArrName = '_' + key
+            this.parseInputBox(value, level + 1, protoValue, key + '_arr_')
+          } else if (typeof value === 'object') {
+            this.parseInputBox(value, level + 1, protoValue, key + '_obj_')
           }
         }
       }
     },
-    download() {
+    download () {
       if (!this.outputObject) {
-        return;
+        return
       }
-      var eleLink = document.createElement("a");
-      eleLink.download = "output.json";
-      eleLink.style.display = "none";
-      var blob = new Blob([JSON.stringify(this.outputObject, null, 2)]);
-      eleLink.href = URL.createObjectURL(blob);
-      document.body.appendChild(eleLink);
-      eleLink.click();
-      document.body.removeChild(eleLink);
+      var eleLink = document.createElement('a')
+      eleLink.download = 'output.json'
+      eleLink.style.display = 'none'
+      var blob = new Blob([JSON.stringify(this.outputObject, null, 2)])
+      eleLink.href = URL.createObjectURL(blob)
+      document.body.appendChild(eleLink)
+      eleLink.click()
+      document.body.removeChild(eleLink)
     },
-    save() {
-      const protoObject = JSON.stringify(this.protoObject);
-      const outputObject = JSON.stringify(this.outputObject);
-      const excelArr = JSON.stringify(this.excelArr);
-      console.log('this.excelArr', this.excelArr);
+    save () {
+      const protoObject = JSON.stringify(this.protoObject)
+      const outputObject = JSON.stringify(this.outputObject)
+      const excelArr = JSON.stringify(this.excelArr)
+      console.log('this.excelArr', this.excelArr)
 
-      localStorage.setItem("isSave", "true");
-      localStorage.setItem("protoObject", protoObject);
-      localStorage.setItem("outputObject", outputObject);
-      localStorage.setItem("excelArr", excelArr);
-      alert("Saved successfully");
+      localStorage.setItem('isSave', 'true')
+      localStorage.setItem('protoObject', protoObject)
+      localStorage.setItem('outputObject', outputObject)
+      localStorage.setItem('excelArr', excelArr)
+      alert('Saved successfully')
     },
-    reset() {
-      this.protoObject = null;
-      this.outputObject = null;
+    reset () {
+      this.protoObject = null
+      this.outputObject = null
       this.dropBox.innerHTML =
-        "拖拽要翻译的文件至此<br>Drag and drop files to translate here";
-      this.inputBox.innerHTML = "";
-      localStorage.removeItem("isSave");
-      localStorage.removeItem("protoObject");
-      localStorage.removeItem("outputObject");
-      localStorage.removeItem("excelArr");
+        '拖拽要翻译的文件至此<br>Drag and drop files to translate here'
+      this.inputBox.innerHTML = ''
+      localStorage.removeItem('isSave')
+      localStorage.removeItem('protoObject')
+      localStorage.removeItem('outputObject')
+      localStorage.removeItem('excelArr')
     }
   }
-};
+}
 </script>
 
 <style lang="stylus" scoped>
