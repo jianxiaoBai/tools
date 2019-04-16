@@ -12,6 +12,13 @@
       保存
       <br>Save
     </div>
+    <div id="i18nt-reset" class="i18nt-button" @click="autoTranslated">
+      自动翻译
+      <br>Save
+    </div>
+    <select style="float: left; margin-top: 30px" id="selectd">
+      <option v-for="item in langList" :value="item.lang"> {{item.name}}</option>
+    </select>
     <a id="downlink"></a>
     <div id="i18nt-download" class="i18nt-button" @click="download">
       下载翻译结果
@@ -24,14 +31,14 @@
       style="display: none"
       accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
     >
-    <div id="i18nt-export" class="i18nt-button" @click="downloadFile(excelArr)">
+    <!-- <div id="i18nt-export" class="i18nt-button" @click="downloadFile(excelArr)">
       Excel 导出
       <br>Excel export
     </div>
     <div id="i18nt-export" class="i18nt-button" @click="uploadFile()">
       Excel 导入
       <br>Excel export
-    </div>
+    </div> -->
     <div class="i18nt-table">
       <table>
         <thead>
@@ -48,7 +55,11 @@
 </template>
 
 <script>
-import XLSX from 'xlsx'
+import axios from 'axios';
+import XLSX from 'xlsx';
+import utils from '../utils'
+import langList from '../langList'
+import { debuglog } from 'util';
 export default {
   name: 'I18nTrans',
   data () {
@@ -62,7 +73,9 @@ export default {
       currentArrName: '',
       outFile: '', // 导出文件el
       imFile: '', // 导入文件el
-      excelData: ''
+      excelData: '',
+      replaceDataIndex: 0,
+      langList: langList
     }
   },
   mounted () {
@@ -73,8 +86,10 @@ export default {
 
     const isSave = localStorage.getItem('isSave')
     if (isSave) {
+      // debugger
       const protoObject = localStorage.getItem('protoObject')
       const outputObject = localStorage.getItem('outputObject')
+      // debugger
       const excelArr = localStorage.getItem('excelArr')
       try {
         this.protoObject = JSON.parse(protoObject)
@@ -85,20 +100,38 @@ export default {
         alert('解析失败，请向技术人员确认文件是否损坏')
       }
       this.parseInputBox(this.outputObject, 0, this.protoObject)
-      // this.parseInputBox(JSON.parse(protoObject), 0);
-      // console.log('this.excelArr', this.excelArr);
-      // debugger
-      const parseExcelArr = this.excelArr.map(x => {
-        return {
-          index: x[0],
-          value: x[1],
-          translated: x[2] || ''
-        }
-      })
-      this.dealFile(parseExcelArr)
     }
   },
   methods: {
+    sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    },
+    async autoTranslated () {
+      const selectd = this.$el.querySelector('#selectd')
+      for (let i = 0; i < this.excelArr.length; i++) {
+        if(!isNaN(Number(this.excelArr[i].value))) {
+          continue
+        }
+        const res = await this.translated(selectd.value, this.excelArr[i].value)
+        this.excelArr[i].translated = res.text
+        console.log(i / this.excelArr.length * 100 + '%');
+        this.sleep(1000)
+      }
+      this.replaceDataIndex = 0
+      await this.replaceData(this.outputObject)
+      this.dealFile(this.excelArr)
+    },
+    async translated (language, value) {
+       const { data } = await axios({
+        method: 'get',
+        url: 'http://127.0.0.1:3000',
+        params: {
+          language,
+          value
+        }
+      })
+      return data;
+    },
     analyzeData (data) {
       // 此处可以解析导入数据
       return data
@@ -116,7 +149,7 @@ export default {
       let inputs = document.querySelectorAll('.input')
       for (let i = 0; i < this.excelData.length; i++) {
         const items = this.excelData[i]
-        this.excelArr[i][2] = items.translated
+        this.excelArr[i].translated = items.translated
         if (!inputs[i]) {
           continue
         }
@@ -125,7 +158,7 @@ export default {
           const text = e.target.innerText
           if (text.replace(/\s*/g, '').length !== 0) {
             const value = text.replace(/(^\s*)|(\s*$)|(\s*\n\s*)/g, '')
-            this.excelArr[e.target.myIndex - 1][2] = value
+            this.excelArr[e.target.myIndex - 1].translated = value
           }
           // console.log(this.excelArr, 'this.excelArr');
         })
@@ -181,7 +214,9 @@ export default {
         }
         let json = XLSX.utils.sheet_to_json($t.wb.Sheets[$t.wb.SheetNames[0]])
         console.log(typeof json)
-        $t.dealFile($t.analyzeData(json)) // analyzeData: 解析导入数据
+        // $t.dealFile($t.analyzeData(json)) // analyzeData: 解析导入数据
+        // this.dealFile(parseExcelArr)
+        $t.autoTranslated($t.analyzeData(json))
       }
       if (this.rABS) {
         reader.readAsArrayBuffer(f)
@@ -194,6 +229,7 @@ export default {
       this.imFile.click()
     },
     downloadFile (rs) {
+      debugger
       // 点击导出按钮
       // const tableHeader = ['index', 'level', 'location', 'value', 'translated'];
       const tableHeader = ['index', 'value', 'translated']
@@ -300,7 +336,19 @@ export default {
         alert('没有选择文件')
       }
     },
-    parseInputBox (obj, level, protoObject = false, OKey = '') {
+    replaceData (thisObj) {
+      for (const key in thisObj) {
+        if (thisObj.hasOwnProperty(key)) {
+          if (typeof thisObj[key] === 'string') {
+               thisObj[key] = this.excelArr[this.replaceDataIndex].translated
+              this.replaceDataIndex++;
+          } else if (typeof thisObj[key] === 'object') {
+            this.replaceData(thisObj[key])
+          }
+        }
+      }
+    },
+    parseInputBox (obj, level, protoObject = false) {
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
           const value = obj[key]
@@ -309,7 +357,6 @@ export default {
             protoValue = protoObject[key]
           }
           if (typeof value === 'string') {
-            this.index++
             const tr = document.createElement('tr')
             tr.className = 'level-' + Math.min(level, 7)
             const tdKey = document.createElement('td')
@@ -326,35 +373,33 @@ export default {
                 tdInput.innerText = value
               }
             }
-            // debugger
-            this.excelArr.push([
-              this.index,
-              /*
-                用于 json 位置标识
-                level,
-                OKey + key + this.currentArrName,
-              */
-              value,
-              protoValue
-            ])
+
+            this.excelArr.push(
+              {
+                index: this.index,
+                value: value,
+                translated: protoValue
+              }
+            );
             tdInput.myIndex = this.index
             tdInput.addEventListener('blur', e => {
               const text = e.target.innerText
               if (text.replace(/\s*/g, '').length !== 0) {
                 const value = text.replace(/(^\s*)|(\s*$)|(\s*\n\s*)/g, '')
                 obj[key] = value
-                this.excelArr[e.target.myIndex - 1][2] = value
+                this.excelArr[e.target.myIndex - 1].translated = value
               }
             })
             tr.appendChild(tdKey)
             tr.appendChild(tdValue)
             tr.appendChild(tdInput)
             this.inputBox.appendChild(tr)
+            this.index++
           } else if (Array.isArray(value)) {
             this.currentArrName = '_' + key
-            this.parseInputBox(value, level + 1, protoValue, key + '_arr_')
+            this.parseInputBox(value, level + 1, protoValue)
           } else if (typeof value === 'object') {
-            this.parseInputBox(value, level + 1, protoValue, key + '_obj_')
+            this.parseInputBox(value, level + 1, protoValue)
           }
         }
       }
@@ -376,7 +421,6 @@ export default {
       const protoObject = JSON.stringify(this.protoObject)
       const outputObject = JSON.stringify(this.outputObject)
       const excelArr = JSON.stringify(this.excelArr)
-      console.log('this.excelArr', this.excelArr)
 
       localStorage.setItem('isSave', 'true')
       localStorage.setItem('protoObject', protoObject)
@@ -414,14 +458,14 @@ export default {
   border solid 1px #333
   margin 20px
 #i18nt-file
-  width 300px
+  width 230px
   float left
 #i18nt-reset
   width 60px
   float left
   cursor pointer
 #i18nt-download
-  width 200px
+  width 160px
   float right
   cursor pointer
 #i18nt-export
